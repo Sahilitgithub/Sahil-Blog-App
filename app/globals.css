@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Define custom CSS variables for easy maintenance and theming */
+:root {
+  /* Black color */ /* Active state color */
+  --color-background: #000119; /* Main background color */
+  --stroke-width: calc(2em / 16); /* Dynamic stroke width */
+  --color-desktop: white; /* Desktop bar color */
+  --color-mobile: #09f1b8; /* Mobile bar color */
+}
+
+.box-shadow {
+  box-shadow: 1px 1px 10px rgba(2, 0, 36, 1);
+}
+
+.header {
+  width: 100%;
+  color: white;
+  background: linear-gradient(
+    90deg,
+    rgba(2, 0, 36, 1) 0%,
+    #03221f 49%,
+    #000119 79%
+  );
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 999;
+}
+
+/* Brand name styling of header */
+.brandName {
+  background-clip: text; /* Clip background to text */
+  background-image: linear-gradient(
+    to right,
+    #09f1b8,
+    #00a2ff,
+    #ff00d2,
+    #fed90f
+  ); /* Gradient text */
+  color: var(--color-background); /* Color from CSS variable */
+  letter-spacing: 2px; /* Spacing between letters */
+  padding: calc(--stroke-width / 2); /* Padding based on stroke width */
+  -webkit-text-stroke-color: transparent; /* Transparent stroke color */
+  -webkit-text-stroke-width: var(
+    --stroke-width
+  ); /* Stroke width from CSS variable */
+}
+
+/* Table Css Style */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+  font-size: 14px;
+}
+
+th,
+td {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+body{
+  background: #9A05A0 ;
+  background: linear-gradient(to right,  #00312D, #0A1449);
+}

@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  User
+  Author
+}
+
+model User {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  email    String   @unique
+  password String
+  image_url String?
+  clerkId String @unique
+  role     Role     @default(User)
+  posts    Post[]
+  comments Comment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  slug        String    @unique
+  description String
+  category    String?
+  featured    String?
+  keywords    String?
+  image       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String    @db.ObjectId
+  comments    Comment[]
+}
+
+model Comment {
+  id      String   @id @default(auto()) @map("_id") @db.ObjectId
+  comment String
+  post    Post     @relation(fields: [postId], references: [id])
+  postId  String   @db.ObjectId
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String   @db.ObjectId
+  createdAt DateTime @default(now())
+}
+
+model Visitors {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userAgent String?
+  device    String   // "desktop" or "mobile"
+  userId    String? // Clerk user Id
+  createdAt DateTime @default(now())
+}
