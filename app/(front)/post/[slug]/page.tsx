@@ -1,17 +1,18 @@
-import { getPostBySlug, getPosts } from '@/utils/prisma/prismaPost';
+import { getPostBySlug } from '@/utils/prisma/prismaPost';
 import PostDetails from './PostDetails';
 import type { Metadata } from 'next'
 import Header from '@/components/Header';
 import { PlainTextForDescription } from '@/utils/PlainTextForDescription';
+import { prisma } from '@/utils/prisma/prismaClient';
 
 // ✅ SSG: pre-generate pages for each post
-export const generateStaticParams = async () => {
+export async function generateStaticParams() {
   try {
-    const posts = await getPosts();
-    return posts.map((item) => ({ slug: item.slug }));
+    const posts = await prisma.post.findMany({ select: { id: true } });
+    return posts.map((post) => ({ id: post.id }));
   } catch (error) {
     console.error("Failed to fetch posts during build:", error);
-    return []; // build won't crash, pages render on-demand
+    return []; // ← Build won't crash, pages load at request time
   }
 }
 

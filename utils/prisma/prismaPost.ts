@@ -2,40 +2,53 @@ import { cache } from "react";
 import { prisma } from "./prismaClient";
 import { Post, Prisma } from "@prisma/client";
 
-// ✅ Cached: Get all posts
-export const getPosts = cache(async () => {
-  const posts = await prisma.post.findMany({
+/* =========================================================
+   ✅ GET ALL POSTS (CACHED)
+========================================================= */
+export const getPosts = cache(async (): Promise<Post[]> => {
+  return await prisma.post.findMany({
     orderBy: { createdAt: "desc" },
-  });   
-  if(!posts){
-    throw new Error("Posts not found");
-  }
-  return posts; 
-});
-
-// ✅ Cached: Get post by slug
-export const getPostBySlug = cache(async (slug: string) => {
-  return await prisma.post.findUnique({
-    where: { slug },
   });
 });
 
-// ❌ NOT Cached: Search function should be dynamic
+/* =========================================================
+   ✅ GET SINGLE POST BY SLUG (CACHED)
+========================================================= */
+export const getPostBySlug = cache(async (slug: string): Promise<Post> => {
+  const post = await prisma.post.findUnique({
+    where: { slug },
+  });
+
+  if (!post) {
+    throw new Error("Post not found");
+  }
+
+  return post;
+});
+
+/* =========================================================
+   ❌ SEARCH & FILTER POSTS (DYNAMIC - NOT CACHED)
+========================================================= */
 interface SearchFilterOptions {
   query?: string;
   category?: string;
-  skip?: number;
-  take?: number;
+  page?: number;
+  limit?: number;
 }
 
 export const searchFilter = async ({
   query,
   category,
-  skip,
-  take,
-}: SearchFilterOptions): Promise<{ posts: Post[]; total: number }> => {
+  page = 1,
+  limit = 10,
+}: SearchFilterOptions): Promise<{
+  posts: Post[];
+  total: number;
+  totalPages: number;
+}> => {
   const filters: Prisma.PostWhereInput[] = [];
 
+  // 🔍 Search Query
   if (query) {
     filters.push({
       OR: [
@@ -45,57 +58,85 @@ export const searchFilter = async ({
     });
   }
 
+  // 📂 Category Filter
   if (category) {
     filters.push({
-      category: {
-        equals: category,
-        mode: "insensitive",
-      },
+      category: category, // safer (works for string or enum)
     });
   }
 
-  const where: Prisma.PostWhereInput = filters.length > 0 ? { AND: filters } : {};
+  const where: Prisma.PostWhereInput =
+    filters.length > 0 ? { AND: filters } : {};
+
+  const skip = (page - 1) * limit;
 
   const [posts, total] = await Promise.all([
     prisma.post.findMany({
       where,
       orderBy: { createdAt: "desc" },
       skip,
-      take,
+      take: limit,
     }),
     prisma.post.count({ where }),
   ]);
 
-  return { posts, total };
+  return {
+    posts,
+    total,
+    totalPages: Math.ceil(total / limit),
+  };
 };
 
-// ✅ Cached: Get all categories
-export const getPostsCategory = cache(async () => {
-  const posts = await prisma.post.findMany({
+/* =========================================================
+   ✅ GET ALL CATEGORIES (OPTIMIZED + CACHED)
+========================================================= */
+export const getPostsCategory = cache(async (): Promise<string[]> => {
+  const categories = await prisma.post.findMany({
+    distinct: ["category"],
     select: { category: true },
-    where: { category: { not: null } },
+    where: {
+      category: {
+        not: null,
+      },
+    },
   });
 
-  const categories = [...new Set(posts.map((post) => post.category))] as string[];
-  return categories;
+  return categories.map((item) => item.category!) as string[];
 });
 
-// ✅ Cached: Get latest & featured posts
-export const getSpecificPost = cache(async () => {
-  const latestPost = await prisma.post.findMany({
-    where: { featured: "Latest Post" },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const featuredPost = await prisma.post.findMany({
-    where: { featured: "Featured Post" },
-    orderBy: { createdAt: "desc" },
-  });
+/* =========================================================
+   ✅ GET LATEST & FEATURED POSTS (CACHED)
+========================================================= */
+export const getSpecificPost = cache(async (): Promise<{
+  latestPost: Post[];
+  featuredPost: Post[];
+}> => {
+  const [latestPost, featuredPost] = await Promise.all([
+    prisma.post.findMany({
+      where: { featured: "Latest Post" },
+      orderBy: { createdAt: "desc" },
+      take: 10, // limit for performance
+    }),
+    prisma.post.findMany({
+      where: { featured: "Featured Post" },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+  ]);
 
   return { latestPost, featuredPost };
 });
 
-// ✅ Cached: Get all users
+/* =========================================================
+   ✅ GET USERS (SAFE + CACHED)
+========================================================= */
 export const getUsers = cache(async () => {
-  return await prisma.user.findMany();
+  return await prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      createdAt: true,
+    },
+  });
 });

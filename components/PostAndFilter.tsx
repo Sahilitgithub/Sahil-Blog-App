@@ -1,10 +1,11 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Post } from "@prisma/client";
 import PostsItem from "./PostItem";
-import PaginantionCom from "./Paginantion";
+import PaginationCom from "./Paginantion";
 import { CloudinaryLoader } from "@/utils/CloudinaryLoader";
 import { PlainTextForDescription } from "@/utils/PlainTextForDescription";
 
@@ -19,30 +20,35 @@ const PostContainer: React.FC<PostAndFilterProps> = ({
   latestPosts,
   featuredPosts,
 }) => {
-  const [query, setQuery] = useState<string>("");
-  const [category, setCategory] = useState<string>("");
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("");
   const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [page, setPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const limit = 8; // Items per page
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasFetched, setHasFetched] = useState(false);
 
-  // Debounced query to reduce API calls
+  const limit = 8;
+
+  // Debounce
   const [debouncedQuery, setDebouncedQuery] = useState(query);
 
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedQuery(query);
-      setPage(1); // reset page when search changes
+      setPage(1);
     }, 500);
 
     return () => clearTimeout(handler);
   }, [query]);
 
-  // Fetch filtered posts
+  // Fetch posts
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchPosts = async () => {
       setLoading(true);
+
       const params = new URLSearchParams();
       if (debouncedQuery) params.append("query", debouncedQuery);
       if (category) params.append("category", category);
@@ -50,19 +56,37 @@ const PostContainer: React.FC<PostAndFilterProps> = ({
       params.append("limit", limit.toString());
 
       try {
-        const response = await fetch(`/api/blog-post-filter?${params.toString()}`);
+        const response = await fetch(
+          `/api/blog-post-filter?${params.toString()}`,
+          { signal: controller.signal }
+        );
+
+        if (!response.ok) throw new Error("Failed to fetch");
+
         const data = await response.json();
-        setPosts(data.data);
-        setTotalPages(data.totalPages);
-      } catch (error) {
-        console.error("Failed to fetch posts:", error);
+
+        if (data?.data) {
+          setPosts(data.data);
+          setTotalPages(data.totalPages || 1);
+        } else {
+          setPosts([]);
+          setTotalPages(1);
+        }
+      } catch (error: any) {
+        if (error.name !== "AbortError") {
+          console.error("Fetch error:", error);
+          setPosts([]);
+        }
       } finally {
         setLoading(false);
+        setHasFetched(true);
       }
     };
 
     fetchPosts();
-  }, [debouncedQuery, category, page]);
+
+    return () => controller.abort();
+  }, [debouncedQuery, category, page, limit]);
 
   return (
     <section className="grid grid-cols-1 md:grid-cols-4 gap-2 my-1 px-4 md:px-16 min-h-screen">
@@ -70,15 +94,22 @@ const PostContainer: React.FC<PostAndFilterProps> = ({
       <aside className="col-span-1">
         {/* Latest Posts */}
         <div>
-          <h3 className="text-xl bg-sky-700 rounded-md px-1">Latest News</h3>
+          <h3 className="text-xl bg-sky-700 rounded-md px-1">
+            Latest News
+          </h3>
+
           <div className="w-full p-2 rounded-md h-[200px] sm:h-[300px] overflow-y-auto bg-black text-white">
             {latestPosts.length === 0 ? (
-              <p className="pl-2 text-white">No Posts Available</p>
+              <p>No Posts Available</p>
             ) : (
               latestPosts.map((item) => (
-                <Link href={`/post/${item.slug}`} key={item.id}>
-                  <article className="bg-[#001021] rounded-md flex gap-1 my-1 h-20">
-                    <figure className="w-1/4 h-20">
+                <Link
+                  key={item.id}
+                  href={`/post/${item.slug}`}
+                  className="block"
+                >
+                  <article className="bg-[#001021] rounded-md flex gap-2 my-1 h-20">
+                    <figure className="w-1/4 h-full">
                       <Image
                         loader={CloudinaryLoader}
                         src={item.image ?? "/images/slide-1.png"}
@@ -88,10 +119,13 @@ const PostContainer: React.FC<PostAndFilterProps> = ({
                         className="object-cover rounded-md w-full h-full"
                       />
                     </figure>
+
                     <div className="w-3/4">
-                      <h2 className="text-[18px] text-green-900 font-semibold capitalize truncate">{item.title}...</h2>
-                      <p className="text-sm">
-                        {/* <div dangerouslySetInnerHTML={{ __html: sanitizeAndTruncate(item.description) }} /> */}
+                      <h2 className="text-sm font-semibold truncate">
+                        {item.title}
+                      </h2>
+
+                      <p className="text-xs">
                         {PlainTextForDescription(item.description, 55)}
                       </p>
                     </div>
@@ -103,28 +137,39 @@ const PostContainer: React.FC<PostAndFilterProps> = ({
         </div>
 
         {/* Featured Posts */}
-        <div className="mt-2">
-          <h3 className="text-xl bg-sky-700 rounded-md px-1">Featured News</h3>
+        <div className="mt-3">
+          <h3 className="text-xl bg-sky-700 rounded-md px-1">
+            Featured News
+          </h3>
+
           <div className="w-full p-2 rounded-md h-[200px] sm:h-[300px] overflow-y-auto bg-black text-white">
             {featuredPosts.length === 0 ? (
-              <p className="pl-2 text-white">No Posts Available</p>
+              <p>No Posts Available</p>
             ) : (
               featuredPosts.map((item) => (
-                <Link href={`/post/${item.slug}`} key={item.id}>
-                  <article className="bg-[#001021] rounded-md flex gap-1 my-1">
-                    <figure className="w-1/4 h-20">
+                <Link
+                  key={item.id}
+                  href={`/post/${item.slug}`}
+                  className="block"
+                >
+                  <article className="bg-[#001021] rounded-md flex gap-2 my-1 h-20">
+                    <figure className="w-1/4 h-full">
                       <Image
                         loader={CloudinaryLoader}
                         src={item.image ?? "/images/slide-1.png"}
                         alt={item.title}
                         width={80}
                         height={80}
-                        className="object-cover w-full h-full rounded-md"
+                        className="object-cover rounded-md w-full h-full"
                       />
                     </figure>
+
                     <div className="w-3/4">
-                      <h2 className="text-[18px] text-green-900 font-semibold capitalize truncate">{item.title}...</h2>
-                      <p className="text-sm">
+                      <h2 className="text-sm font-semibold truncate">
+                        {item.title}
+                      </h2>
+
+                      <p className="text-xs">
                         {PlainTextForDescription(item.description, 55)}
                       </p>
                     </div>
@@ -138,16 +183,18 @@ const PostContainer: React.FC<PostAndFilterProps> = ({
 
       {/* MAIN CONTENT */}
       <article className="col-span-3">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-1 mb-2">
+        {/* Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-3">
           <div className="col-span-3">
             <input
               type="text"
-              placeholder="Search Something"
+              placeholder="Search something..."
               className="w-full rounded-md p-3 bg-black text-white"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
+
           <div className="col-span-1">
             <select
               className="w-full p-3 rounded-md bg-black text-white"
@@ -167,20 +214,26 @@ const PostContainer: React.FC<PostAndFilterProps> = ({
           </div>
         </div>
 
-        {/* Posts Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 bg-black pb-4 p-2 rounded-md mt-1">
+        {/* Posts */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 bg-black p-2 rounded-md min-h-[200px]">
           {loading ? (
-            <p className="pl-2 text-white">Loading...!</p>
-          ) : posts.length === 0 ? (
-            <p className="pl-2 text-white">No Posts Available</p>
+            <p className="text-white">Loading...</p>
+          ) : !hasFetched ? null : posts.length === 0 ? (
+            <p className="text-white">No Posts Available</p>
           ) : (
-            posts.map((item) => <PostsItem key={item.id} post={item} />)
+            posts.map((item) => (
+              <PostsItem key={item.id} post={item} />
+            ))
           )}
         </div>
 
         {/* Pagination */}
-        <div className="my-3">
-          <PaginantionCom currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+        <div className="my-4">
+          <PaginationCom
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+          />
         </div>
       </article>
     </section>

@@ -11,14 +11,13 @@ export default async function Home() {
   const { featuredPost, latestPost } = await getSpecificPost();
   return (
     <main className="">
-          <Header />
-
+      <Header />
       <PostAndFilter
         postCategory={categores}
         latestPosts={latestPost }
         featuredPosts={featuredPost}
       />
-                <Footer />
+      <Footer />
     </main>
   );
 }
