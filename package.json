@@ -69,6 +69,6 @@
   "author": "",
   "license": "ISC",
   "prisma": {
-    "schema": "prisma/shcema.prisma"
+    "schema": "prisma/schema.prisma"
   }
 }
