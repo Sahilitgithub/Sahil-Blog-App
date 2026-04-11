@@ -72,9 +72,14 @@ const PostContainer: React.FC<PostAndFilterProps> = ({
           setPosts([]);
           setTotalPages(1);
         }
-      } catch (error: any) {
-        if (error.name !== "AbortError") {
-          console.error("Fetch error:", error);
+      } catch (error) {
+        if(typeof error === "object" && error !== null && "name" in error && error.name === "AbortError") {
+          console.log("Fetch aborted");
+        } else if (error instanceof Error) {
+          console.error("Fetch error:", error.message);
+          setPosts([]);
+        } else {
+          console.error("Unexpected error:", error);
           setPosts([]);
         }
       } finally {
