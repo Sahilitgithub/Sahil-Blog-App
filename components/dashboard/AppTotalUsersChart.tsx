@@ -2,20 +2,17 @@ import { removeRole, setRole } from "@/utils/actions";
 import { clerkClient } from "@clerk/nextjs/server";
 import Image from "next/image";
 
-interface UserProps {
+// ✅ Fixed: only keep fields that getUsers() actually returns
+type SafeUser = {
   id: string;
-  name: string;
+  name: string | null;
   email: string;
-  password: string;
-  image_url: string | null;
-  clerkId: string;
-  role: string;
   createdAt: Date;
-}
+};
 
-export async function AppTotalUsersChart({ users }: { users: UserProps[] }) {
-    const client = await clerkClient();
-    const clerkUsers = (await client.users.getUserList()).data;
+export async function AppTotalUsersChart({ users }: { users: SafeUser[] }) {
+  const client = await clerkClient();
+  const clerkUsers = (await client.users.getUserList()).data;
 
   return (
     <div>
@@ -38,47 +35,57 @@ export async function AppTotalUsersChart({ users }: { users: UserProps[] }) {
                 />
               </figure>
               <div>
-                <h2 className="text-sm capitalize"> 
-                  {user.firstName && user.lastName ? `${user.firstName + ' ' + user.lastName}` : "Unknown" }
+                <h2 className="text-sm capitalize">
+                  {user.firstName && user.lastName
+                    ? `${user.firstName + " " + user.lastName}`
+                    : "Unknown"}
                 </h2>
-                <p className="text-[11px]"> 
+                <p className="text-[11px]">
                   {new Date(user.createdAt).toLocaleDateString()}
                 </p>
               </div>
               <div>
-                <p className="text-sm bg-green-800 rounded-md capitalize inline-block px-2">{user.publicMetadata?.role as string || "User"}</p>
+                <p className="text-sm bg-green-800 rounded-md capitalize inline-block px-2">
+                  {(user.publicMetadata?.role as string) || "User"}
+                </p>
               </div>
             </div>
             {/* Image Name And Date End */}
+
             {/* Change Role Start */}
             <div className="flex gap-2">
-              {/* Mark as Admin  */}
-                <form action={setRole}>
-                  <input type="hidden" value={user.id} name="id" />
-                  <input type="hidden" value="admin" name="role" />
-                  <button 
+              {/* Make Admin */}
+              <form action={setRole}>
+                <input type="hidden" value={user.id} name="id" />
+                <input type="hidden" value="admin" name="role" />
+                <button
                   type="submit"
-                  className="px-2 py-1 bg-slate-900 rounded-md text-sm border border-neutral-300" >
-                      Make Admin
-                  </button>
-                </form>
-              {/* Mark as User  */}
+                  className="px-2 py-1 bg-slate-900 rounded-md text-sm border border-neutral-300"
+                >
+                  Make Admin
+                </button>
+              </form>
+
+              {/* Make User */}
               <form action={setRole}>
                 <input type="hidden" value={user.id} name="id" />
                 <input type="hidden" value="user" name="role" />
-                 <button 
+                <button
                   type="submit"
-                  className="px-2 py-1 bg-slate-900 rounded-md text-sm border border-neutral-300" >
-                      Make User
-                  </button>
+                  className="px-2 py-1 bg-slate-900 rounded-md text-sm border border-neutral-300"
+                >
+                  Make User
+                </button>
               </form>
-               {/* Delete Clerk User */}
+
+              {/* Remove Role */}
               <form action={removeRole}>
                 <input type="hidden" value={user.id} name="id" />
-                <button 
+                <button
                   type="submit"
-                  className="px-2 py-1 bg-red-900 rounded-md text-sm border border-neutral-300" >
-                    Romove Role
+                  className="px-2 py-1 bg-red-900 rounded-md text-sm border border-neutral-300"
+                >
+                  Remove Role
                 </button>
               </form>
             </div>

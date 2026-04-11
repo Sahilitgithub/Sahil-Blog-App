@@ -1,4 +1,4 @@
-'use client';
+"use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, SubmitHandler, useForm } from "react-hook-form";
@@ -104,7 +104,6 @@ const CreatePost = () => {
       <h1 className="text-xl font-bold mb-4">Create Post</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-
         {/* Title */}
         <input
           {...register("title", { required: "Title is required" })}
@@ -141,10 +140,7 @@ const CreatePost = () => {
           control={control}
           rules={{ required: "Description is required" }}
           render={({ field }) => (
-            <RichTextEditor
-              content={field.value}
-              onChange={field.onChange}
-            />
+            <RichTextEditor content={field.value} onChange={field.onChange} />
           )}
         />
         {errors.description && (
@@ -187,14 +183,14 @@ const CreatePost = () => {
 
         {/* Image Upload */}
         <div className="flex gap-4 items-center">
-
           <CldUploadWidget
             uploadPreset="blog-app"
             options={{ maxFiles: 1 }}
             onUpload={() => setUploading(true)}
-            onSuccess={(result: any) => {
-              if (result?.info?.secure_url) {
-                setValue("image", result.info.secure_url, {
+            onSuccess={(result) => {
+              const info = result?.info as { secure_url: string } | undefined;
+              if (info?.secure_url) {
+                setValue("image", info.secure_url, {
                   shouldValidate: true,
                 });
               }
@@ -226,7 +222,6 @@ const CreatePost = () => {
               />
             )}
           </div>
-
         </div>
 
         {/* Submit */}
@@ -236,7 +231,6 @@ const CreatePost = () => {
         >
           {isSubmitting ? "Submitting..." : "Submit"}
         </button>
-
       </form>
 
       <style jsx>{`
